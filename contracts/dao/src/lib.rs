@@ -13,9 +13,26 @@
 //! specific proposal, and a member's nullifier is unique per proposal (approve-once).
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Bytes, BytesN, Env, Vec,
+    contract, contracterror, contractevent, contractimpl, contracttype, Bytes, BytesN, Env, Vec,
 };
 use semaphore_verifier::verify_encoded;
+
+#[contractevent]
+pub struct ProposalCreated {
+    pub proposal_id: u32,
+}
+
+#[contractevent]
+pub struct Approved {
+    pub proposal_id: u32,
+    pub approvals: u32,
+}
+
+#[contractevent]
+pub struct Executed {
+    pub proposal_id: u32,
+    pub action: BytesN<32>,
+}
 
 const R_BE: [u8; 32] = [
     0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29, 0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58, 0x5d,
@@ -107,7 +124,7 @@ impl ConfidentialDao {
         let p = Proposal { action, scope_seed, approvals: 0, executed: false };
         env.storage().persistent().set(&DataKey::Proposal(id), &p);
         env.storage().instance().set(&DataKey::ProposalCount, &(id + 1));
-        env.events().publish((symbol_short!("proposed"), id), ());
+        ProposalCreated { proposal_id: id }.publish(&env);
         id
     }
 
@@ -163,7 +180,7 @@ impl ConfidentialDao {
         env.storage().persistent().set(&akey, &());
         p.approvals += 1;
         env.storage().persistent().set(&DataKey::Proposal(proposal_id), &p);
-        env.events().publish((symbol_short!("approved"), proposal_id), p.approvals);
+        Approved { proposal_id, approvals: p.approvals }.publish(&env);
         Ok(p.approvals)
     }
 
@@ -187,7 +204,7 @@ impl ConfidentialDao {
         }
         p.executed = true;
         env.storage().persistent().set(&DataKey::Proposal(proposal_id), &p);
-        env.events().publish((symbol_short!("executed"), proposal_id), p.action);
+        Executed { proposal_id, action: p.action.clone() }.publish(&env);
         Ok(())
     }
 
