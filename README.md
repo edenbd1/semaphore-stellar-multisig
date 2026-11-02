@@ -26,3 +26,9 @@ stellar contract build
 
 The `dao` flow runs end-to-end live on testnet (see the library repo's deployment notes and
 `scripts/`). License: MIT.
+
+## Status & safety
+
+> ⚠️ **Prototype — unaudited, testnet only.** This code has **not** been audited and runs only
+> on Stellar **testnet** with small fixtures. Do not use it with real value or on mainnet.
+> Proofs reuse Ethereum's Semaphore trusted-setup ceremony (no new ceremony is performed).
