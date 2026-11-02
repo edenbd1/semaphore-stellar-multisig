@@ -27,6 +27,10 @@ stellar contract build
 The `dao` flow runs end-to-end live on testnet (see the library repo's deployment notes and
 `scripts/`). License: MIT.
 
+## Example: Anonymous Voting (flagship)
+
+[`examples/anonymous-voting`](./examples/anonymous-voting) runs a full anonymous vote on Stellar testnet: a committee votes on a proposal, and at threshold it executes, without revealing who voted. Live run: contract `CCCIIY6D...`.
+
 ## Status & safety
 
 > ⚠️ **Prototype — unaudited, testnet only.** This code has **not** been audited and runs only
