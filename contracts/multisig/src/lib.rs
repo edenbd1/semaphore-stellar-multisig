@@ -160,6 +160,13 @@ impl SemaphoreMultisig {
             .ok_or(Error::NotInitialized)?;
         Ok(cfg.threshold)
     }
+
+    /// A no-op that requires the account to authorize itself — invoking it externally triggers
+    /// `__check_auth`, the entry point for the end-to-end on-chain threshold-auth demo.
+    pub fn protected(env: Env) -> u32 {
+        env.current_contract_address().require_auth();
+        42
+    }
 }
 
 #[contractimpl]

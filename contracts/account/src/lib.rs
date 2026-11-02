@@ -137,6 +137,13 @@ impl SemaphoreAccount {
         store.set(&DataKey::Vk, &vk);
         Ok(())
     }
+
+    /// A no-op that requires the account to authorize itself — invoking it externally triggers
+    /// `__check_auth`, so it is the entry point for the end-to-end on-chain auth demo.
+    pub fn protected(env: Env) -> u32 {
+        env.current_contract_address().require_auth();
+        42
+    }
 }
 
 #[contractimpl]
