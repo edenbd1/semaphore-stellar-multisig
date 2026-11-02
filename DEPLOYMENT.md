@@ -31,3 +31,14 @@ no signature), while a different account pays the fee (payer-privacy). See
 
 The proof is generated at auth time over the exact `signature_payload` the host checks, and
 returned as the account's custom signature via `authorizeEntry({ signatureScVal })`.
+
+## On-chain `__check_auth` for the k-of-n multisig — verified on testnet
+
+Two distinct members each prove over the runtime auth payload; the `Vec<ProofEntry>` is the
+account signature. `__check_auth` verifies both proofs, enforces distinct nullifiers and the
+threshold, and `protected()` executes. See `tools/onchain-checkauth/multisig-*.mjs`.
+
+| | |
+|---|---|
+| Multisig (2-of-3) | `CBI4XIQLTURVQWWSPLKQF2E27FULKY5462S6GIAUFJTDMOTNJU7YGVA6` |
+| 2-of-3 `__check_auth` | [`8836726b…`](https://stellar.expert/explorer/testnet/tx/8836726b84da0c97d184991b32eb35928346c83cc55eb475dd23f8ea07dfef1a) → `SUCCESS`, returns `42` |
