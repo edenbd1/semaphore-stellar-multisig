@@ -42,3 +42,16 @@ threshold, and `protected()` executes. See `tools/onchain-checkauth/multisig-*.m
 |---|---|
 | Multisig (2-of-3) | `CBI4XIQLTURVQWWSPLKQF2E27FULKY5462S6GIAUFJTDMOTNJU7YGVA6` |
 | 2-of-3 `__check_auth` | [`8836726b…`](https://stellar.expert/explorer/testnet/tx/8836726b84da0c97d184991b32eb35928346c83cc55eb475dd23f8ea07dfef1a) → `SUCCESS`, returns `42` |
+
+## Explicit fee-bump payer-privacy — verified on testnet
+
+An inner tx (source A) invokes the account's `protected()` authorized by the member's ZK proof;
+a distinct relayer B pays the fee via a Stellar fee-bump. See `tools/onchain-checkauth/fee-bump.mjs`.
+
+| | |
+|---|---|
+| Fee-bump tx | [`18c4a43b…`](https://stellar.expert/explorer/testnet/tx/18c4a43b80e84a9e5af3650070346a50b70142c5b174ee5cef699abe9f60e67e) → `SUCCESS` |
+| Inner source A paid | `0.0000000 XLM` |
+| Relayer B paid (the fee) | `0.0030968 XLM` |
+
+The member authorizes purely in zero-knowledge — no account, no key — and a different party pays.
