@@ -1,6 +1,6 @@
 use crate::fixture::*;
 use crate::{authorize, Error, SemaphoreAccount, SemaphoreAccountClient, SemaphoreSig, VkData};
-use soroban_sdk::{testutils::Address as _, vec, Address, BytesN, Env};
+use soroban_sdk::{vec, Address, BytesN, Env};
 
 fn setup(env: &Env) -> Address {
     let id = env.register(SemaphoreAccount, ());
