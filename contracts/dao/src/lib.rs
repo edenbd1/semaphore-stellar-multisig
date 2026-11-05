@@ -125,12 +125,19 @@ pub enum DataKey {
 #[contract]
 pub struct ConfidentialDao;
 
+// Storage TTL (~5s/ledger → ~17280 ledgers/day): keep live entries ~30 days out, bumping when
+// under ~15 days remain, so an active DAO never lets its config, proposals, approvals or
+// used-scope-seed markers archive (an archived seed marker would reopen cross-proposal replay).
+const TTL_BUMP: u32 = 518_400; // ~30 days
+const TTL_THRESHOLD: u32 = 259_200; // ~15 days
+
 #[contractimpl]
 impl ConfidentialDao {
     pub fn __constructor(env: Env, root: BytesN<32>, depth: u32, threshold: u32, vk: VkData) {
         env.storage()
             .instance()
             .set(&DataKey::Config, &Config { root, depth, threshold, vk });
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
     }
 
     /// Open a proposal to authorize `action`. `scope_seed` MUST be globally unique: approval
@@ -147,10 +154,14 @@ impl ConfidentialDao {
             return Err(Error::ScopeSeedReused);
         }
         env.storage().persistent().set(&seed_key, &());
+        env.storage().persistent().extend_ttl(&seed_key, TTL_THRESHOLD, TTL_BUMP);
         let id: u32 = env.storage().instance().get(&DataKey::ProposalCount).unwrap_or(0);
         let p = Proposal { action, scope_seed, approvals: 0, executed: false };
-        env.storage().persistent().set(&DataKey::Proposal(id), &p);
+        let pkey = DataKey::Proposal(id);
+        env.storage().persistent().set(&pkey, &p);
+        env.storage().persistent().extend_ttl(&pkey, TTL_THRESHOLD, TTL_BUMP);
         env.storage().instance().set(&DataKey::ProposalCount, &(id + 1));
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
         ProposalCreated { proposal_id: id }.publish(&env);
         Ok(id)
     }
@@ -205,8 +216,12 @@ impl ConfidentialDao {
             return Err(Error::AlreadyApproved);
         }
         env.storage().persistent().set(&akey, &());
+        env.storage().persistent().extend_ttl(&akey, TTL_THRESHOLD, TTL_BUMP);
         p.approvals += 1;
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &p);
+        let pkey = DataKey::Proposal(proposal_id);
+        env.storage().persistent().set(&pkey, &p);
+        env.storage().persistent().extend_ttl(&pkey, TTL_THRESHOLD, TTL_BUMP);
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
         Approved { proposal_id, approvals: p.approvals }.publish(&env);
         Ok(p.approvals)
     }
@@ -230,7 +245,10 @@ impl ConfidentialDao {
             return Err(Error::ThresholdNotMet);
         }
         p.executed = true;
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &p);
+        let pkey = DataKey::Proposal(proposal_id);
+        env.storage().persistent().set(&pkey, &p);
+        env.storage().persistent().extend_ttl(&pkey, TTL_THRESHOLD, TTL_BUMP);
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
         Executed { proposal_id, action: p.action.clone() }.publish(&env);
         Ok(())
     }

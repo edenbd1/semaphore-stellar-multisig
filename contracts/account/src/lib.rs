@@ -71,6 +71,12 @@ pub enum DataKey {
     Nullifier(BytesN<32>),
 }
 
+// Storage TTL (~5s/ledger → ~17280 ledgers/day): keep live entries ~30 days out, bumping when
+// under ~15 days remain, so an active account never lets its config or nullifier registry archive
+// (an archived nullifier entry would otherwise reopen the replay window).
+const TTL_BUMP: u32 = 518_400; // ~30 days
+const TTL_THRESHOLD: u32 = 259_200; // ~15 days
+
 /// Semaphore's field hash of a 32-byte value: `keccak256(value) >> 8`.
 fn semaphore_hash(env: &Env, value: &BytesN<32>) -> BytesN<32> {
     let k = env.crypto().keccak256(&Bytes::from(value.clone())).to_array();
@@ -101,6 +107,8 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, sig: &SemaphoreSig) -> Result<
     let root: BytesN<32> = store.get(&DataKey::Root).ok_or(Error::NotInitialized)?;
     let scope_seed: BytesN<32> = store.get(&DataKey::ScopeSeed).ok_or(Error::NotInitialized)?;
     let vk: VkData = store.get(&DataKey::Vk).ok_or(Error::NotInitialized)?;
+    // Keep the account config alive while it is in use.
+    store.extend_ttl(TTL_THRESHOLD, TTL_BUMP);
 
     // Domain-bound scope: derived on-chain from THIS contract's address + the configured seed,
     // so a proof for this account is not valid against any other contract sharing the group root.
@@ -142,6 +150,8 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, sig: &SemaphoreSig) -> Result<
         return Err(Error::NullifierAlreadyUsed);
     }
     env.storage().persistent().set(&key, &());
+    // Bump the nullifier entry so it is not archived (which would reopen the replay window).
+    env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_BUMP);
     Ok(())
 }
 
@@ -163,6 +173,7 @@ impl SemaphoreAccount {
         store.set(&DataKey::Root, &root);
         store.set(&DataKey::ScopeSeed, &scope_seed);
         store.set(&DataKey::Vk, &vk);
+        store.extend_ttl(TTL_THRESHOLD, TTL_BUMP);
     }
 
     /// A no-op that requires the account to authorize itself — invoking it externally triggers

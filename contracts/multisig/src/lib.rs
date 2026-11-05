@@ -33,6 +33,11 @@ fn is_canonical(v: &BytesN<32>) -> bool {
     v.to_array() < R_BE
 }
 
+// Storage TTL (~5s/ledger → ~17280 ledgers/day): keep the config ~30 days out, bumping when under
+// ~15 days remain, so an active multisig never lets its instance state archive (and brick auth).
+const TTL_BUMP: u32 = 518_400; // ~30 days
+const TTL_THRESHOLD: u32 = 259_200; // ~15 days
+
 /// Semaphore's field hash of a 32-byte value: `keccak256(value) >> 8`.
 fn semaphore_hash(env: &Env, value: &BytesN<32>) -> BytesN<32> {
     let k = env.crypto().keccak256(&Bytes::from(value.clone())).to_array();
@@ -107,6 +112,7 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, proofs: &Vec<ProofEntry>) -> R
         .instance()
         .get(&DataKey::Config)
         .ok_or(Error::NotInitialized)?;
+    env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
 
     if proofs.len() < cfg.threshold {
         return Err(Error::ThresholdNotMet);
@@ -163,6 +169,7 @@ impl SemaphoreMultisig {
         env.storage()
             .instance()
             .set(&DataKey::Config, &Config { root, depth, threshold, vk });
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_BUMP);
     }
 
     /// Current threshold (read helper).
