@@ -129,21 +129,15 @@ pub struct SemaphoreAccount;
 
 #[contractimpl]
 impl SemaphoreAccount {
-    /// Configure the account's group root, scope hash and verification key (once).
-    pub fn init(
-        env: Env,
-        root: BytesN<32>,
-        scope_hash: BytesN<32>,
-        vk: VkData,
-    ) -> Result<(), Error> {
+    /// Configure the account's group root, scope hash and verification key. This runs atomically
+    /// as part of the deploy transaction (constructor), so there is no window in which an
+    /// unprotected `init` could be front-run to install an attacker's group — unlike a separate
+    /// public initializer, a constructor cannot be called again or by anyone else.
+    pub fn __constructor(env: Env, root: BytesN<32>, scope_hash: BytesN<32>, vk: VkData) {
         let store = env.storage().instance();
-        if store.has(&DataKey::Root) {
-            return Err(Error::AlreadyInitialized);
-        }
         store.set(&DataKey::Root, &root);
         store.set(&DataKey::ScopeHash, &scope_hash);
         store.set(&DataKey::Vk, &vk);
-        Ok(())
     }
 
     /// A no-op that requires the account to authorize itself — invoking it externally triggers

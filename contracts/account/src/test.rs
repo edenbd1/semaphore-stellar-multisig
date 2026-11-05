@@ -1,9 +1,8 @@
 use crate::fixture::*;
-use crate::{authorize, Error, SemaphoreAccount, SemaphoreAccountClient, SemaphoreSig, VkData};
+use crate::{authorize, Error, SemaphoreAccount, SemaphoreSig, VkData};
 use soroban_sdk::{vec, Address, BytesN, Env};
 
 fn setup(env: &Env) -> Address {
-    let id = env.register(SemaphoreAccount, ());
     let vk = VkData {
         alpha: BytesN::from_array(env, &VK_ALPHA),
         beta: BytesN::from_array(env, &VK_BETA),
@@ -18,12 +17,15 @@ fn setup(env: &Env) -> Address {
             BytesN::from_array(env, &VK_IC_4),
         ],
     };
-    SemaphoreAccountClient::new(env, &id).init(
-        &BytesN::from_array(env, &ROOT),
-        &BytesN::from_array(env, &SCOPE_HASH),
-        &vk,
-    );
-    id
+    // Config is set atomically by the constructor (no front-runnable public init).
+    env.register(
+        SemaphoreAccount,
+        (
+            BytesN::from_array(env, &ROOT),
+            BytesN::from_array(env, &SCOPE_HASH),
+            vk,
+        ),
+    )
 }
 
 fn sig(env: &Env) -> SemaphoreSig {
