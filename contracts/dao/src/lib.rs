@@ -59,6 +59,7 @@ pub enum Error {
     NonCanonicalInput = 5,
     InvalidProof = 6,
     ThresholdNotMet = 7,
+    ScopeSeedReused = 8,
 }
 
 #[contracttype]
@@ -105,6 +106,7 @@ pub enum DataKey {
     ProposalCount,
     Proposal(u32),
     Approval(u32, BytesN<32>),
+    UsedScopeSeed(BytesN<32>),
 }
 
 #[contract]
@@ -118,14 +120,26 @@ impl ConfidentialDao {
             .set(&DataKey::Config, &Config { root, depth, threshold, vk });
     }
 
-    /// Open a proposal to authorize `action`; `scope_seed` must be unique per proposal.
-    pub fn create_proposal(env: Env, action: BytesN<32>, scope_seed: BytesN<32>) -> u32 {
+    /// Open a proposal to authorize `action`. `scope_seed` MUST be globally unique: approval
+    /// proofs bind to `scope = hash(scope_seed)`, so if two proposals shared a seed, the approvals
+    /// cast for one could be replayed on the other. We enforce uniqueness on-chain to make that
+    /// cross-proposal replay impossible.
+    pub fn create_proposal(
+        env: Env,
+        action: BytesN<32>,
+        scope_seed: BytesN<32>,
+    ) -> Result<u32, Error> {
+        let seed_key = DataKey::UsedScopeSeed(scope_seed.clone());
+        if env.storage().persistent().has(&seed_key) {
+            return Err(Error::ScopeSeedReused);
+        }
+        env.storage().persistent().set(&seed_key, &());
         let id: u32 = env.storage().instance().get(&DataKey::ProposalCount).unwrap_or(0);
         let p = Proposal { action, scope_seed, approvals: 0, executed: false };
         env.storage().persistent().set(&DataKey::Proposal(id), &p);
         env.storage().instance().set(&DataKey::ProposalCount, &(id + 1));
         ProposalCreated { proposal_id: id }.publish(&env);
-        id
+        Ok(id)
     }
 
     /// Approve a proposal with one Semaphore membership proof. Returns the new approval count.

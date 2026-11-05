@@ -19,7 +19,7 @@ use soroban_sdk::{
     crypto::Hash,
     Bytes, BytesN, Env, Vec,
 };
-use semaphore_verifier::verify_encoded;
+use semaphore_verifier::{is_canonical, verify_encoded};
 
 #[cfg(test)]
 extern crate std;
@@ -34,6 +34,7 @@ pub enum Error {
     AlreadyInitialized = 2,
     InvalidProof = 3,
     NullifierAlreadyUsed = 4,
+    NonCanonicalInput = 5,
 }
 
 /// Groth16/BN254 verification key, stored at construction.
@@ -83,6 +84,13 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, sig: &SemaphoreSig) -> Result<
     let root: BytesN<32> = store.get(&DataKey::Root).ok_or(Error::NotInitialized)?;
     let scope_hash: BytesN<32> = store.get(&DataKey::ScopeHash).ok_or(Error::NotInitialized)?;
     let vk: VkData = store.get(&DataKey::Vk).ok_or(Error::NotInitialized)?;
+
+    // Reject a non-canonical nullifier (>= r). The verifier reduces mod r, so without this a
+    // member could resubmit the same proof with nullifier `n + r` (a distinct storage key that
+    // still verifies) and bypass the replay guard below.
+    if !is_canonical(&sig.nullifier) {
+        return Err(Error::NonCanonicalInput);
+    }
 
     // Bind the signal to this transaction: message := Semaphore-hash(payload).
     let message = semaphore_hash(env, payload);

@@ -87,6 +87,21 @@ fn rejects_execute_below_threshold() {
     assert_eq!(r, Err(Ok(Error::ThresholdNotMet)));
 }
 
+/// Two proposals cannot share a scope_seed: that is what makes an approval bind to one specific
+/// proposal. Without it, approvals cast for proposal A could be replayed on a duplicate B.
+#[test]
+fn rejects_reused_scope_seed() {
+    let env = Env::default();
+    let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
+    let p = payload(&env);
+    let _id = client.create_proposal(&p, &p);
+    // Reusing the same scope_seed (even for a different action) must be rejected.
+    let mut other = PAYLOAD;
+    other[0] ^= 0xff;
+    let again = client.try_create_proposal(&BytesN::from_array(&env, &other), &p);
+    assert_eq!(again, Err(Ok(Error::ScopeSeedReused)));
+}
+
 /// An approval whose proof is not bound to the proposal's action is rejected.
 #[test]
 fn rejects_approval_for_wrong_action() {
