@@ -4,6 +4,7 @@
 import { Identity } from "@semaphore-protocol/identity"
 import { Group } from "@semaphore-protocol/group"
 import { generateProof, unpackGroth16Proof } from "@semaphore-protocol/proof"
+import { keccak256, toBeHex, concat, toUtf8Bytes, getBytes } from "ethers"
 import { readFileSync } from "fs"
 import * as pkg from "@stellar/stellar-sdk"
 const { rpc, Horizon, TransactionBuilder, Operation, Keypair, Networks, authorizeEntry, xdr, scValToNative } = pkg
@@ -15,7 +16,9 @@ const B = Keypair.fromSecret(readFileSync("/tmp/B.secret", "utf8").trim())   // 
 const st = JSON.parse(readFileSync("/tmp/account-e2e.json", "utf8"))
 const member = await Identity.import(st.identity)
 const group = new Group(st.commitments.map((c) => BigInt(c)))
-const scopeBig = BigInt(st.scopeSeed)
+// Domain separation: the account derives its scope on-chain from its OWN address, so the proof's
+// scope must fold the deployed account id (AID) in exactly the same way.
+const scopeBig = BigInt(keccak256(concat([toUtf8Bytes(AID), getBytes(toBeHex(BigInt(st.scopeSeed), 32))])))
 
 const server = new rpc.Server("https://soroban-testnet.stellar.org")
 const horizon = new Horizon.Server("https://horizon-testnet.stellar.org")

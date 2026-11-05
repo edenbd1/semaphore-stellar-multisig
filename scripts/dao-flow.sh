@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # End-to-end confidential DAO flow on testnet: deploy -> create proposal -> two members
 # approve (one proof per tx) -> execute. Usage: scripts/dao-flow.sh [identity]
+#
+# NOTE: this fixture-based flow predates domain separation and no longer works as-is — the scope
+# is now derived on-chain from the DEPLOYED contract address, so the approval proofs must be
+# generated AFTER deploy (bound to that address). Use the deploy-then-prove helper
+# tools/live-dao.mjs instead (see TESTNET-LIVE-STATUS in the plan notes). Kept for reference.
 set -euo pipefail
 IDENTITY="${1:-semaphore-dev}"
 cd "$(dirname "$0")/.."
