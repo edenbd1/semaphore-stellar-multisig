@@ -1,5 +1,6 @@
 use crate::fixture::*;
 use crate::{authorize, Error, ProofEntry, SemaphoreMultisig, VkData};
+use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{vec, Address, BytesN, Env, Vec};
 
 fn vk(env: &Env) -> VkData {
@@ -19,9 +20,11 @@ fn vk(env: &Env) -> VkData {
     }
 }
 
-/// Register a 2-of-3 confidential multisig.
+/// Register a 2-of-3 confidential multisig at the FIXED address the fixture's domain-bound scope
+/// was proven against, so on-chain `current_contract_address()` matches what the prover folded in.
 fn setup(env: &Env, threshold: u32) -> Address {
-    env.register(
+    env.register_at(
+        &Address::from_str(env, CONTRACT),
         SemaphoreMultisig,
         (BytesN::from_array(env, &ROOT), 2u32, threshold, vk(env)),
     )
@@ -93,8 +96,26 @@ fn reports_2of_n_budget() {
     assert!(cpu < 100_000_000, "2-of-n must fit the mainnet per-tx CPU limit");
 }
 
-/// Proofs presented against a different payload (transaction) fail: the signal/scope binding
-/// forces message == scope == hash(payload), so the proofs no longer verify.
+/// Domain separation: the same k proofs presented to a DIFFERENT multisig (identical group root
+/// and payload, different address) are rejected — the on-chain scope is bound to the multisig's
+/// own address, so an authorization cannot be replayed across multisigs.
+#[test]
+fn rejects_cross_contract_replay() {
+    let env = Env::default();
+    // A second multisig at a DIFFERENT address, same config.
+    let other = env.register_at(
+        &Address::generate(&env),
+        SemaphoreMultisig,
+        (BytesN::from_array(&env, &ROOT), 2u32, 2u32, vk(&env)),
+    );
+    let payload = BytesN::from_array(&env, &PAYLOAD);
+    let proofs: Vec<ProofEntry> = vec![&env, entry_a(&env), entry_b(&env)];
+    let r = env.as_contract(&other, || authorize(&env, &payload, &proofs));
+    assert_eq!(r, Err(Error::InvalidProof));
+}
+
+/// Proofs presented against a different payload (transaction) fail: the signal binding forces
+/// message := hash(payload) (and scope is payload-derived too), so the proofs no longer verify.
 #[test]
 fn rejects_wrong_payload() {
     let env = Env::default();

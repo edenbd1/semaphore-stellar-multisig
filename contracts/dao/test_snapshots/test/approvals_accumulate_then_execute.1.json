@@ -1,6 +1,6 @@
 {
   "generators": {
-    "address": 1,
+    "address": 0,
     "nonce": 0,
     "mux_id": 0
   },
@@ -28,7 +28,7 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CC7H5U4P6S4UUHJ6XZKIFWSCR6FBT6BKMW45KPNYM6PKWTEONHTAWLTT",
               "key": {
                 "vec": [
                   {
@@ -38,7 +38,7 @@
                     "u32": 0
                   },
                   {
-                    "bytes": "276f48f3057edf47dab9ab258afe17e72a4fec330829fd51b9c7907b0dced02d"
+                    "bytes": "0d75b638f7646e30d113a7a50052551ea32ba8ee01fd079ceb2109c8aa6c98f1"
                   }
                 ]
               },
@@ -56,7 +56,7 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CC7H5U4P6S4UUHJ6XZKIFWSCR6FBT6BKMW45KPNYM6PKWTEONHTAWLTT",
               "key": {
                 "vec": [
                   {
@@ -66,7 +66,7 @@
                     "u32": 0
                   },
                   {
-                    "bytes": "2cf90e10ca0fe48c2f6637f56ae0b5c21971dc4ceb9af6c245b57d652a09a896"
+                    "bytes": "168def59779832b28393d1eff209d16ee74622caa920c665b73750342d1ec9e9"
                   }
                 ]
               },
@@ -84,7 +84,7 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CC7H5U4P6S4UUHJ6XZKIFWSCR6FBT6BKMW45KPNYM6PKWTEONHTAWLTT",
               "key": {
                 "vec": [
                   {
@@ -127,7 +127,7 @@
                       "symbol": "scope_seed"
                     },
                     "val": {
-                      "bytes": "2222222222222222222222222222222222222222222222222222222222222222"
+                      "bytes": "4444444444444444444444444444444444444444444444444444444444444444"
                     }
                   }
                 ]
@@ -144,14 +144,14 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CC7H5U4P6S4UUHJ6XZKIFWSCR6FBT6BKMW45KPNYM6PKWTEONHTAWLTT",
               "key": {
                 "vec": [
                   {
                     "symbol": "UsedScopeSeed"
                   },
                   {
-                    "bytes": "2222222222222222222222222222222222222222222222222222222222222222"
+                    "bytes": "4444444444444444444444444444444444444444444444444444444444444444"
                   }
                 ]
               },
@@ -169,13 +169,13 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CC7H5U4P6S4UUHJ6XZKIFWSCR6FBT6BKMW45KPNYM6PKWTEONHTAWLTT",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
                 "contract_instance": {
                   "executable": {
-                    "wasm": "a41146d7d116b29faf18d228425fa97194e16df1d4f3e5d4f51c58ca557fcc6d"
+                    "wasm": "28845a5c9b730f09b676c319c84203bb7951fd55fb3c23043087addbee25d7f9"
                   },
                   "storage": [
                     {
@@ -201,7 +201,7 @@
                               "symbol": "root"
                             },
                             "val": {
-                              "bytes": "2252c7b2058ab23872635cbf7a52732001424729c444ccff3a4756fff6070977"
+                              "bytes": "047e4a5d580acacf00f2848a2defab83738b78d4af73cafa6c83c6aa0ece6638"
                             }
                           },
                           {
@@ -307,8 +307,8 @@
           "data": {
             "contract_code": {
               "ext": "v0",
-              "hash": "a41146d7d116b29faf18d228425fa97194e16df1d4f3e5d4f51c58ca557fcc6d",
-              "code": "746573745f636f6e74726163745f666f725f636f6e74726163745f69645f4341414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414144324b4d"
+              "hash": "28845a5c9b730f09b676c319c84203bb7951fd55fb3c23043087addbee25d7f9",
+              "code": "746573745f636f6e74726163745f666f725f636f6e74726163745f69645f43433748355534503653345555484a36585a4b4946575343523646425436424b4d5734354b504e594d36504b5754454f4e485441574c5454"
             }
           },
           "ext": "v0"

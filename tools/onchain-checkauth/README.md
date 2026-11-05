@@ -8,7 +8,7 @@ the fee (payer-privacy).
 npm install
 # 1) generate a group + member, print init args, persist identity to /tmp/account-e2e.json
 node setup.mjs > /tmp/account-init.json
-# 2) deploy + init the account via the Stellar CLI with those args (root, scope_hash, vk)
+# 2) deploy + init the account via the Stellar CLI with those args (root, scope_seed, vk)
 #    (see the repo scripts), save the id to /tmp/account_id, and the source secret to /tmp/semdev.secret
 # 3) invoke protected(): simulate -> get the auth payload -> prove over it -> submit
 node auth.mjs "$(cat /tmp/account_id)"

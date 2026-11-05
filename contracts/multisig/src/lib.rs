@@ -41,6 +41,18 @@ fn semaphore_hash(env: &Env, value: &BytesN<32>) -> BytesN<32> {
     BytesN::from_array(env, &out)
 }
 
+/// Domain-separated scope: fold the multisig's OWN contract address into the scope so the k
+/// proofs minted for a transaction here cannot be replayed against another contract that shares
+/// the group root. The prover binds `scope` to `keccak256( ascii(contract_strkey) || payload )`
+/// (then `>> 8`); we recompute it from `env.current_contract_address()`, unforgeable by others.
+fn domain_scope_hash(env: &Env, scope_seed: &BytesN<32>) -> BytesN<32> {
+    let strkey = env.current_contract_address().to_string();
+    let mut preimage = strkey.to_bytes();
+    preimage.append(&Bytes::from(scope_seed.clone()));
+    let rawscope = BytesN::from_array(env, &env.crypto().keccak256(&preimage).to_array());
+    semaphore_hash(env, &rawscope)
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -100,8 +112,10 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, proofs: &Vec<ProofEntry>) -> R
         return Err(Error::ThresholdNotMet);
     }
 
-    // message == scope == Semaphore-hash(payload): binds every proof to this transaction.
-    let bound = semaphore_hash(env, payload);
+    // message := Semaphore-hash(payload) binds every proof to this transaction; scope is
+    // domain-bound to THIS contract, so the proofs cannot be replayed against another multisig.
+    let message = semaphore_hash(env, payload);
+    let scope = domain_scope_hash(env, payload);
 
     let mut seen: Map<BytesN<32>, ()> = Map::new(env);
     for e in proofs.iter() {
@@ -117,8 +131,8 @@ pub fn authorize(env: &Env, payload: &BytesN<32>, proofs: &Vec<ProofEntry>) -> R
             env,
             cfg.root.clone(),
             e.nullifier.clone(),
-            bound.clone(),
-            bound.clone()
+            message.clone(),
+            scope.clone()
         ];
         let ok = verify_encoded(
             env,

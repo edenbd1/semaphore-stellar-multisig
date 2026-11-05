@@ -20,7 +20,10 @@ fn vk(env: &Env) -> VkData {
 }
 
 fn deploy(env: &Env, threshold: u32) -> Address {
-    env.register(
+    // Register at the FIXED address the fixture's domain-bound proposal scope was proven
+    // against, so on-chain `current_contract_address()` matches what the prover folded in.
+    env.register_at(
+        &Address::from_str(env, CONTRACT),
         ConfidentialDao,
         (BytesN::from_array(env, &ROOT), 2u32, threshold, vk(env)),
     )
@@ -43,10 +46,13 @@ fn entry_b(env: &Env) -> ProofEntry {
     }
 }
 
-// The fixture proofs bind message == scope == hash(PAYLOAD), so a proposal reuses PAYLOAD for
-// both its action digest and its scope seed.
+// The fixture proofs bind message == hash(PAYLOAD action) and scope == domain(SCOPE_SEED), so a
+// proposal is created with PAYLOAD as its action digest and SCOPE_SEED as its (domain-bound) seed.
 fn payload(env: &Env) -> BytesN<32> {
     BytesN::from_array(env, &PAYLOAD)
+}
+fn scope_seed(env: &Env) -> BytesN<32> {
+    BytesN::from_array(env, &SCOPE_SEED)
 }
 
 /// Two members approve one proof per transaction; at threshold the proposal executes.
@@ -55,7 +61,7 @@ fn approvals_accumulate_then_execute() {
     let env = Env::default();
     let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
     let p = payload(&env);
-    let id = client.create_proposal(&p, &p);
+    let id = client.create_proposal(&p, &scope_seed(&env));
 
     assert_eq!(client.approve(&id, &entry_a(&env)), 1);
     assert_eq!(client.approve(&id, &entry_b(&env)), 2);
@@ -69,7 +75,7 @@ fn rejects_double_approval() {
     let env = Env::default();
     let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
     let p = payload(&env);
-    let id = client.create_proposal(&p, &p);
+    let id = client.create_proposal(&p, &scope_seed(&env));
     client.approve(&id, &entry_a(&env));
     let again = client.try_approve(&id, &entry_a(&env));
     assert_eq!(again, Err(Ok(Error::AlreadyApproved)));
@@ -81,7 +87,7 @@ fn rejects_execute_below_threshold() {
     let env = Env::default();
     let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
     let p = payload(&env);
-    let id = client.create_proposal(&p, &p);
+    let id = client.create_proposal(&p, &scope_seed(&env));
     client.approve(&id, &entry_a(&env)); // only 1 of 2
     let r = client.try_execute(&id);
     assert_eq!(r, Err(Ok(Error::ThresholdNotMet)));
@@ -94,11 +100,11 @@ fn rejects_reused_scope_seed() {
     let env = Env::default();
     let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
     let p = payload(&env);
-    let _id = client.create_proposal(&p, &p);
+    let _id = client.create_proposal(&p, &scope_seed(&env));
     // Reusing the same scope_seed (even for a different action) must be rejected.
     let mut other = PAYLOAD;
     other[0] ^= 0xff;
-    let again = client.try_create_proposal(&BytesN::from_array(&env, &other), &p);
+    let again = client.try_create_proposal(&BytesN::from_array(&env, &other), &scope_seed(&env));
     assert_eq!(again, Err(Ok(Error::ScopeSeedReused)));
 }
 
@@ -109,8 +115,25 @@ fn rejects_approval_for_wrong_action() {
     let client = ConfidentialDaoClient::new(&env, &deploy(&env, 2));
     let mut other = PAYLOAD;
     other[0] ^= 0xff;
-    // scope_seed stays PAYLOAD (so nullifier/scope match), but action differs -> message mismatch.
-    let id = client.create_proposal(&BytesN::from_array(&env, &other), &payload(&env));
+    // scope_seed stays SCOPE_SEED (so nullifier/scope match), but action differs -> message mismatch.
+    let id = client.create_proposal(&BytesN::from_array(&env, &other), &scope_seed(&env));
+    let r = client.try_approve(&id, &entry_a(&env));
+    assert_eq!(r, Err(Ok(Error::InvalidProof)));
+}
+
+/// Domain separation: an approval proof for a proposal in THIS DAO is rejected by another DAO
+/// at a different address (identical group root, same action and scope seed). The on-chain scope
+/// is bound to the DAO's own address, so approvals cannot be replayed across DAOs.
+#[test]
+fn rejects_cross_contract_replay() {
+    let env = Env::default();
+    // A second DAO at a DIFFERENT address, same config.
+    let other = env.register(
+        ConfidentialDao,
+        (BytesN::from_array(&env, &ROOT), 2u32, 2u32, vk(&env)),
+    );
+    let client = ConfidentialDaoClient::new(&env, &other);
+    let id = client.create_proposal(&payload(&env), &scope_seed(&env));
     let r = client.try_approve(&id, &entry_a(&env));
     assert_eq!(r, Err(Ok(Error::InvalidProof)));
 }

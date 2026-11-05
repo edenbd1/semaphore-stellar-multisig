@@ -10,6 +10,10 @@
 //!   3. the proof's **nullifier has not been used before** (persistent registry), so each
 //!      membership can authorize at most once per scope.
 //!
+//! The scope is **domain-separated**: it is derived on-chain from the account's own contract
+//! address (`domain_scope_hash`), so a proof minted for this account cannot be replayed against
+//! any other contract that happens to share the same group root.
+//!
 //! The result: whoever controls a group member identity can authorize the account's actions
 //! without revealing *which* member — anonymous, replay-protected authorization.
 
@@ -62,7 +66,7 @@ pub struct SemaphoreSig {
 #[contracttype]
 pub enum DataKey {
     Root,
-    ScopeHash,
+    ScopeSeed,
     Vk,
     Nullifier(BytesN<32>),
 }
@@ -76,14 +80,31 @@ fn semaphore_hash(env: &Env, value: &BytesN<32>) -> BytesN<32> {
     BytesN::from_array(env, &out)
 }
 
+/// Domain-separated scope: fold the account's OWN contract address into the scope so a proof
+/// minted for this deployment cannot be replayed against another contract that shares the same
+/// group root. The prover binds the circuit's `scope` to
+/// `keccak256( ascii(contract_strkey) || scope_seed )` (then Semaphore's `>> 8` field hash);
+/// we recompute it here from `env.current_contract_address()`, which no other contract can forge.
+fn domain_scope_hash(env: &Env, scope_seed: &BytesN<32>) -> BytesN<32> {
+    let strkey = env.current_contract_address().to_string();
+    let mut preimage = strkey.to_bytes();
+    preimage.append(&Bytes::from(scope_seed.clone()));
+    let rawscope = BytesN::from_array(env, &env.crypto().keccak256(&preimage).to_array());
+    semaphore_hash(env, &rawscope)
+}
+
 /// Core authorization logic, parameterised on the raw 32-byte payload so it is unit-testable
 /// without constructing a `Hash<32>` (whose constructor is SDK-internal). Must run inside the
 /// account's contract context (it reads/writes the account's storage).
 pub fn authorize(env: &Env, payload: &BytesN<32>, sig: &SemaphoreSig) -> Result<(), Error> {
     let store = env.storage().instance();
     let root: BytesN<32> = store.get(&DataKey::Root).ok_or(Error::NotInitialized)?;
-    let scope_hash: BytesN<32> = store.get(&DataKey::ScopeHash).ok_or(Error::NotInitialized)?;
+    let scope_seed: BytesN<32> = store.get(&DataKey::ScopeSeed).ok_or(Error::NotInitialized)?;
     let vk: VkData = store.get(&DataKey::Vk).ok_or(Error::NotInitialized)?;
+
+    // Domain-bound scope: derived on-chain from THIS contract's address + the configured seed,
+    // so a proof for this account is not valid against any other contract sharing the group root.
+    let scope_hash = domain_scope_hash(env, &scope_seed);
 
     // Reject a non-canonical nullifier (>= r). The verifier reduces mod r, so without this a
     // member could resubmit the same proof with nullifier `n + r` (a distinct storage key that
@@ -129,14 +150,18 @@ pub struct SemaphoreAccount;
 
 #[contractimpl]
 impl SemaphoreAccount {
-    /// Configure the account's group root, scope hash and verification key. This runs atomically
+    /// Configure the account's group root, scope seed and verification key. This runs atomically
     /// as part of the deploy transaction (constructor), so there is no window in which an
     /// unprotected `init` could be front-run to install an attacker's group — unlike a separate
     /// public initializer, a constructor cannot be called again or by anyone else.
-    pub fn __constructor(env: Env, root: BytesN<32>, scope_hash: BytesN<32>, vk: VkData) {
+    ///
+    /// The effective scope is `domain_scope_hash(contract_address, scope_seed)`, so even two
+    /// accounts deployed with the same `root` and `scope_seed` have distinct scopes and cannot
+    /// replay each other's proofs.
+    pub fn __constructor(env: Env, root: BytesN<32>, scope_seed: BytesN<32>, vk: VkData) {
         let store = env.storage().instance();
         store.set(&DataKey::Root, &root);
-        store.set(&DataKey::ScopeHash, &scope_hash);
+        store.set(&DataKey::ScopeSeed, &scope_seed);
         store.set(&DataKey::Vk, &vk);
     }
 

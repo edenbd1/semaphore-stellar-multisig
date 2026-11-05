@@ -1,6 +1,6 @@
 {
   "generators": {
-    "address": 1,
+    "address": 0,
     "nonce": 0,
     "mux_id": 0
   },
@@ -24,13 +24,13 @@
           "data": {
             "contract_data": {
               "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "contract": "CAHM6LQBG3Y6MUFDV5EEO4SXFIVG6Y6HXIW77Q6CU6RXV27DU33ZAREP",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
                 "contract_instance": {
                   "executable": {
-                    "wasm": "a41146d7d116b29faf18d228425fa97194e16df1d4f3e5d4f51c58ca557fcc6d"
+                    "wasm": "b5119d9757bec4a098d59d0c110c94b71645682757504e5b3889891ebe66789b"
                   },
                   "storage": [
                     {
@@ -42,19 +42,19 @@
                         ]
                       },
                       "val": {
-                        "bytes": "184f9ece54dadc286dfcb1c8465d9e6520e76c8c2311b8efa9f5b2a4f806d170"
+                        "bytes": "13373c87a23e9ca85f4384813a81f196b5333bef8dbb85047b8477f88d87a80d"
                       }
                     },
                     {
                       "key": {
                         "vec": [
                           {
-                            "symbol": "ScopeHash"
+                            "symbol": "ScopeSeed"
                           }
                         ]
                       },
                       "val": {
-                        "bytes": "00b21068f44ab9c7f226ad0185ecc4cb7532b6eb592b9a7e77e5a0155da2fe62"
+                        "bytes": "2222222222222222222222222222222222222222222222222222222222222222"
                       }
                     },
                     {
@@ -141,8 +141,8 @@
           "data": {
             "contract_code": {
               "ext": "v0",
-              "hash": "a41146d7d116b29faf18d228425fa97194e16df1d4f3e5d4f51c58ca557fcc6d",
-              "code": "746573745f636f6e74726163745f666f725f636f6e74726163745f69645f4341414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414144324b4d"
+              "hash": "b5119d9757bec4a098d59d0c110c94b71645682757504e5b3889891ebe66789b",
+              "code": "746573745f636f6e74726163745f666f725f636f6e74726163745f69645f4341484d364c5142473359364d554644563545454f3453584649564736593648584957373751364355365258563237445533335a41524550"
             }
           },
           "ext": "v0"

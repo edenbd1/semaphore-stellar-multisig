@@ -38,7 +38,7 @@ The `dao` flow runs end-to-end live on testnet (see the library repo's deploymen
 
 ### Known limitations
 
-- **Domain separation:** never reuse the same `(group root, scope seed)` across two deployments — give each app a unique scope. Proofs are otherwise replayable across any contracts that share a group root. (A robust fix binding the contract address into the scope is planned.)
+- **Domain separation (enforced):** every contract derives its scope **on-chain from its own contract address** (`domain_scope_hash` = `keccak256(ascii(contract_strkey) ‖ scope_seed) >> 8`), so a proof minted for one deployment **cannot** be replayed against another that shares a group root — even with an identical `(group root, scope seed)`. Each repo has a `rejects_cross_contract_replay` test proving this against a real ceremony proof.
 - `account`: the scope is fixed at construction, so each member can authorize the account **once ever**, not once per transaction. A per-tx-scope variant (like `multisig`) is planned.
 - `dao`: `create_proposal`/`execute` are permissionless (griefing / storage growth), and a **self-submitted** approval's fee-payer is public — route approvals through a relayer to keep the voter anonymous.
 - No storage-TTL management yet (instance archival can brick a contract until restored).

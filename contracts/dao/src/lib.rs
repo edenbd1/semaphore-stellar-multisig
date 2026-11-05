@@ -48,6 +48,19 @@ fn semaphore_hash(env: &Env, value: &BytesN<32>) -> BytesN<32> {
     BytesN::from_array(env, &out)
 }
 
+/// Domain-separated proposal scope: fold the DAO's OWN contract address into the scope so an
+/// approval proof minted for a proposal in this DAO cannot be replayed against another contract
+/// that shares the group root. The prover binds `scope` to
+/// `keccak256( ascii(contract_strkey) || scope_seed )` (then `>> 8`); we recompute it here from
+/// `env.current_contract_address()`, which no other contract can forge.
+fn domain_scope_hash(env: &Env, scope_seed: &BytesN<32>) -> BytesN<32> {
+    let strkey = env.current_contract_address().to_string();
+    let mut preimage = strkey.to_bytes();
+    preimage.append(&Bytes::from(scope_seed.clone()));
+    let rawscope = BytesN::from_array(env, &env.crypto().keccak256(&preimage).to_array());
+    semaphore_hash(env, &rawscope)
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -163,7 +176,7 @@ impl ConfidentialDao {
 
         // message := hash(action), scope := hash(scope_seed): bind to this action & proposal.
         let msg = semaphore_hash(&env, &p.action);
-        let scope = semaphore_hash(&env, &p.scope_seed);
+        let scope = domain_scope_hash(&env, &p.scope_seed);
         let pub_signals = soroban_sdk::vec![
             &env,
             cfg.root.clone(),

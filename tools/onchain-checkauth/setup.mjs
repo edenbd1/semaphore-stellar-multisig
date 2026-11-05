@@ -1,6 +1,12 @@
 // Phase 1 of the on-chain __check_auth demo: generate a fresh Semaphore group + member, pick a
-// per-account scope seed, and print the init args (root, scope_hash, vk) for the CLI. Persist
+// per-account scope seed, and print the init args (root, scope_seed, vk) for the CLI. Persist
 // the member identity + group + scope seed so phase 3 can prove over the runtime auth payload.
+//
+// NOTE (domain separation): the account now derives its scope ON-CHAIN as
+//   scope = keccak256( ascii(deployed_contract_strkey) || scope_seed ) >> 8
+// so the constructor takes the raw `scope_seed` (below), and phase 3 must fold the DEPLOYED
+// contract address into the proof's scope — see tools/gen-account-fixture-domain.mjs for the
+// exact recipe. A proof made for one account no longer verifies against another.
 import { Identity } from "@semaphore-protocol/identity"
 import { Group } from "@semaphore-protocol/group"
 import { keccak256, toBeHex } from "ethers"
@@ -14,9 +20,8 @@ const other1 = new Identity()
 const other2 = new Identity()
 const group = new Group([member.commitment, other1.commitment, other2.commitment])
 
-const SCOPE_SEED = "0x" + "33".repeat(32) // per-account scope
+const SCOPE_SEED = "0x" + "33".repeat(32) // per-account scope seed (raw; scope is derived on-chain)
 const root = group.root.toString()
-const scopeHash = hash(BigInt(SCOPE_SEED))
 
 const vkey = JSON.parse(readFileSync("new URL("../../fixtures/vkey-depth2.json", import.meta.url)", "utf8"))
 const G1 = (p) => be32(p[0]) + be32(p[1])
@@ -37,5 +42,5 @@ writeFileSync("/tmp/account-e2e.json", JSON.stringify({
     root,
 }))
 
-// init args for the CLI
-console.log(JSON.stringify({ root: be32(root), scope_hash: be32(scopeHash), vk }))
+// init args for the CLI (constructor now takes the raw scope_seed; scope is derived on-chain)
+console.log(JSON.stringify({ root: be32(root), scope_seed: BigInt(SCOPE_SEED).toString(16).padStart(64, "0"), vk }))

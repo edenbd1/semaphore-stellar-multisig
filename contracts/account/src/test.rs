@@ -1,9 +1,10 @@
 use crate::fixture::*;
 use crate::{authorize, Error, SemaphoreAccount, SemaphoreSig, VkData};
+use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{vec, Address, BytesN, Env};
 
-fn setup(env: &Env) -> Address {
-    let vk = VkData {
+fn vkdata(env: &Env) -> VkData {
+    VkData {
         alpha: BytesN::from_array(env, &VK_ALPHA),
         beta: BytesN::from_array(env, &VK_BETA),
         gamma: BytesN::from_array(env, &VK_GAMMA),
@@ -16,14 +17,20 @@ fn setup(env: &Env) -> Address {
             BytesN::from_array(env, &VK_IC_3),
             BytesN::from_array(env, &VK_IC_4),
         ],
-    };
+    }
+}
+
+fn setup(env: &Env) -> Address {
     // Config is set atomically by the constructor (no front-runnable public init).
-    env.register(
+    // Register at the FIXED address the fixture's domain-bound scope was proven against, so
+    // on-chain `current_contract_address()` matches what the prover folded into the scope.
+    env.register_at(
+        &Address::from_str(env, CONTRACT),
         SemaphoreAccount,
         (
             BytesN::from_array(env, &ROOT),
-            BytesN::from_array(env, &SCOPE_HASH),
-            vk,
+            BytesN::from_array(env, &SCOPE_SEED),
+            vkdata(env),
         ),
     )
 }
@@ -94,6 +101,28 @@ fn rejects_non_canonical_nullifier_replay() {
     bad.nullifier = BytesN::from_array(&env, &nplus_r);
     let second = env.as_contract(&id, || authorize(&env, &payload, &bad));
     assert_eq!(second, Err(Error::NonCanonicalInput));
+}
+
+/// Domain separation: the SAME proof presented to a DIFFERENT contract (identical group root
+/// and scope seed, but a different address) is rejected. The on-chain scope is derived from the
+/// contract's own address, so a proof minted for one account cannot be replayed against another
+/// that merely shares the group — closing the cross-contract replay gap.
+#[test]
+fn rejects_cross_contract_replay() {
+    let env = Env::default();
+    // A second, independently-deployed account: same root + seed + vk, different address.
+    let other = env.register_at(
+        &Address::generate(&env),
+        SemaphoreAccount,
+        (
+            BytesN::from_array(&env, &ROOT),
+            BytesN::from_array(&env, &SCOPE_SEED),
+            vkdata(&env),
+        ),
+    );
+    let payload = BytesN::from_array(&env, &PAYLOAD);
+    let r = env.as_contract(&other, || authorize(&env, &payload, &sig(&env)));
+    assert_eq!(r, Err(Error::InvalidProof));
 }
 
 /// A proof presented against a different payload (transaction) fails: the signal binding
