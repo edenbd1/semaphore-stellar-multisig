@@ -2,7 +2,7 @@
 //! Phase-3 (cont.): a **proposal-based confidential multisig** that removes the per-transaction
 //! threshold ceiling.
 //!
-//! Instead of submitting `k` proofs in one transaction (bounded to ~3 by the 100M instruction
+//! Instead of submitting `k` proofs in one transaction (bounded to ~13 by the 400M instruction
 //! limit), members approve a proposal **asynchronously, one proof per transaction**. The
 //! contract accumulates distinct nullifiers until the threshold is reached, then the proposal
 //! can execute. This is the usual DAO flow (create → approve → execute), made anonymous: you

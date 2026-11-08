@@ -81,8 +81,8 @@ fn rejects_duplicate_member() {
 }
 
 /// Budget: report the CPU cost of a 2-of-n check. Each proof is one pairing check (~29M
-/// instructions), so the achievable threshold per transaction is bounded by the 100M
-/// per-tx limit (~3 proofs); larger thresholds need batching / accumulation (future work).
+/// instructions), so the achievable threshold per transaction is bounded by the 400M
+/// per-tx limit (~13 proofs on CPU alone; memory and tx size also apply); larger thresholds need batching / accumulation (future work).
 #[test]
 fn reports_2of_n_budget() {
     let env = Env::default();
@@ -93,7 +93,7 @@ fn reports_2of_n_budget() {
     assert_eq!(r, Ok(()));
     let cpu = env.cost_estimate().budget().cpu_instruction_cost();
     std::println!("2-of-n authorize(): cpu_instructions = {cpu}");
-    assert!(cpu < 100_000_000, "2-of-n must fit the mainnet per-tx CPU limit");
+    assert!(cpu < 400_000_000, "2-of-n must fit the mainnet per-tx CPU limit");
 }
 
 /// Domain separation: the same k proofs presented to a DIFFERENT multisig (identical group root

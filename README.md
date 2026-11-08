@@ -12,7 +12,7 @@ that `k` distinct members approved — never *which* ones.
 - **`contracts/account`** — single-signer custom account (`__check_auth`): one Semaphore proof
   authorizes, with the signal bound to `signature_payload` and a nullifier replay guard.
 - **`contracts/multisig`** — confidential **k-of-n** account (`__check_auth`, single tx): `k`
-  distinct-nullifier proofs, `k >= threshold`; budget ~29M instructions per proof (so ~3/tx).
+  distinct-nullifier proofs, `k >= threshold`; budget ~29M instructions per proof (so up to ~13/tx on CPU, against the 400M per-tx limit).
 - **`contracts/dao`** — proposal-based confidential multisig: members approve asynchronously
   (one proof per tx, no per-tx ceiling); `create_proposal` → `approve` → `execute`.
 - **`contracts/verifier`** — vendored Groth16/BN254 verifier (see `VENDORED.md`).
